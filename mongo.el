@@ -25,16 +25,13 @@
 ;;; Code:
 
 (require 'cl)
-
-(defmacro mongo-awhen (test &rest body)
-  (declare (indent 1))
-  `(let ((it ,test)) (when it ,@body)))
+(require 'bson)
 
 (defmacro mongo-with-gensyms (names &rest body)
   (declare (indent 1))
-  (let ,(loop for name in names
-              collect `(,name (gensym ,(symbol-name name))))
-    ,@body))
+  `(let ,(loop for name in names
+               collect `(,name (gensym ,(symbol-name name))))
+     ,@body))
 
 (defsubst mongo-make-keyword (string)
   (intern (format ":%s" string)))
@@ -50,8 +47,9 @@
            (,interval! ,interval)
            (,elapsed 0.0)
            ,last-value)
-       (while (and (or (null ,timeout!) (< ,elapsed ,timeout!))
-                   (null (setq ,last-value ,form)))
+       (while (null (setq ,last-value ,form))
+         (when (and ,timeout! (> ,elapsed ,timeout!))
+           (error "timeout: %s" ',form))
          (sit-for ,interval!)
          (incf ,elapsed ,interval!))
        ,last-value)))
@@ -268,7 +266,7 @@
                           `(prog1 ,value (process-put ,object ',',slot-name ,value)))))))
 
 (mongo-define-process-struct mongo-database
-  request response (request-counter 0) callback)
+  request response timeout (request-counter 0) callback)
 
 (defvar mongo-database nil)
 
@@ -292,10 +290,14 @@
 
 (defun mongo-database-process-callback (database response)
   (setf (mongo-database-response database) response)
-  (mongo-awhen (mongo-database-callback database)
+  (bson-awhen (mongo-database-callback database)
     (funcall it database response)))
 
-(defun* mongo-open-database (&key (host 'local) (port 27017) (make-default t) callback)
+(defun* mongo-open-database (&key (host 'local)
+                                  (port 27017)
+                                  (make-default t)
+                                  timeout
+                                  callback)
   (let* ((process (make-network-process :name "mongo"
                                         :buffer (mongo-generate-new-unibyte-buffer " mongo")
                                         :host host
@@ -311,7 +313,7 @@
 (defun* mongo-close-database (&key (database mongo-database))
   (process-send-eof database))
 
-(defmacro mongo-with-database (database &rest body)
+(defmacro mongo-with-current-database (database &rest body)
   (declare (indent 1))
   `(let ((mongo-database ,database)) ,@body))
 
@@ -344,9 +346,14 @@
   (mongo-finalize-request request database)
   (mongo-serialize-message-to-process request database))
 
-(defun mongo-receive-request (&key (database mongo-database) (timeout 60))
+(defun* mongo-receive-response (&key (database mongo-database))
   (mongo-wait-for (mongo-database-response database)
-                  :timeout timeout))
+                  :timeout (mongo-database-timeout database)))
+
+(defun* mongo-do-request (request &key (database mongo-database) async)
+  (mongo-send-request request :database database)
+  (unless async
+    (mongo-receive-response :database database)))
 
 (provide 'mongo)
 ;;; mongo.el ends here

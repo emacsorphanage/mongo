@@ -25,6 +25,14 @@
 
 (require 'cl)
 
+(defmacro bson-aif (test then &rest else)
+  (declare (indent 2))
+  `(let ((it ,test)) (if it ,then ,@else)))
+
+(defmacro bson-awhen (test &rest body)
+  (declare (indent 1))
+  `(let ((it ,test)) (when it ,@body)))
+
 (defmacro bson-with-temp-unibyte-buffer (&rest body)
   (declare (indent 0))
   `(with-temp-buffer (set-buffer-multibyte nil) ,@body))
@@ -91,8 +99,11 @@
 (defun bson-document-put (document key value)
   (bson-document-dispatch document
     (hash-table (puthash key value document))
-    (alist      (setcdr (assoc key document) value))
-    (plist      (plist-put document (intern key) value))))
+    (alist      (bson-aif (assoc key document) 
+                    (setcdr it value)
+                  (push (cons key value) document)))
+    (plist      (setq document (plist-put document (intern key) value))))
+  document)
 
 (defun bson-document-for (document function)
   (bson-document-dispatch document
@@ -407,14 +418,14 @@
             (bson-marker-symbol   (bson-deserialize-symbol))
             (bson-marker-int32    (bson-deserialize-int32))))))
 
-(defun bson-deserialize-document-1 (end)
-  (do ((table (make-hash-table :test 'equal)))
-      ((or (>= (point) end)
+(defun bson-deserialize-document-1 (bound)
+  (do ((document '()))
+      ((or (>= (point) bound)
            (eq (char-after) #x00))
-       table)
+       (nreverse document))
     (destructuring-bind (key . value)
         (bson-deserialize-element)
-      (puthash key value table))))
+      (push (cons key value) document))))
 
 (defun bson-deserialize-document ()
   (let ((length (bson-deserialize-int32)))
