@@ -93,17 +93,23 @@
 
 (defmacro mongo-define-message-fragment (name &rest slots)
   (declare (indent 1))
-  (flet ((make-slot-serializer (value slot-type)
-           (if (consp slot-type)
-               (ecase (first slot-type)
-                 (* `(loop for element in ,value
-                           collect (mongo-serialize-of-type element ',(second slot-type)))))
+  (flet
+      ((make-slot-serializer (value slot-type)
+         (if (consp slot-type)
+             (ecase (first slot-type)
+               (*
+                `(loop for element in ,value
+                    collect
+                      (mongo-serialize-of-type
+                       element ',(second slot-type)))))
              `(mongo-serialize-of-type ,value ',slot-type)))
-         (make-slot-deserializer (slot-type bound)
-           (if (consp slot-type)
-               (ecase (first slot-type)
-                 (* `(loop while (< (point) ,bound)
-                           collect (mongo-deserialize-of-type ',(second slot-type)))))
+       (make-slot-deserializer (slot-type bound)
+         (if (consp slot-type)
+             (ecase (first slot-type)
+               (* `(loop while (< (point) ,bound)
+                      collect
+                        (mongo-deserialize-of-type
+                         ',(second slot-type)))))
              `(mongo-deserialize-of-type ',slot-type))))
     (let ((constructor-name (intern (format "make-%s" name))))
       `(progn
