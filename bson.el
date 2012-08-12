@@ -263,15 +263,24 @@
                   (bson-serialize-name name)
                   (,function object))))
     (bson-etypecase object
-      (float      (serialize-element bson-marker-double bson-serialize-double))
-      (string     (serialize-element bson-marker-string bson-serialize-string))
-      (hash-table (serialize-element bson-marker-document bson-serialize-document))
-      (list       (serialize-element bson-marker-document bson-serialize-document))
-      (bson-oid   (serialize-element bson-marker-oid bson-serialize-oid))
-      (vector     (serialize-element bson-marker-array bson-serialize-array))
-      (boolean    (serialize-element bson-marker-boolean bson-serialize-boolean))
-      (symbol     (serialize-element bson-marker-symbol bson-serialize-symbol))
-      (integer    (serialize-element bson-marker-int32 bson-serialize-int32)))))
+      (float      (serialize-element
+                   bson-marker-double bson-serialize-double))
+      (string     (serialize-element
+                   bson-marker-string bson-serialize-string))
+      (hash-table (serialize-element
+                   bson-marker-document bson-serialize-document))
+      (list       (serialize-element
+                   bson-marker-document bson-serialize-document))
+      (bson-oid   (serialize-element
+                   bson-marker-oid bson-serialize-oid))
+      (vector     (serialize-element
+                   bson-marker-array bson-serialize-array))
+      (boolean    (serialize-element
+                   bson-marker-boolean bson-serialize-boolean))
+      (symbol     (serialize-element
+                   bson-marker-symbol bson-serialize-symbol))
+      (integer    (serialize-element
+                   bson-marker-int32 bson-serialize-int32)))))
 
 (defun bson-serialize-document-1 (document)
   (bson-document-do (key value document)
@@ -286,7 +295,8 @@
         (goto-char start)
         (bson-serialize-int32 (+ (- end start) 4))))))
 
-(defun* bson-serialize-document-to-buffer (document &optional (buffer (current-buffer)))
+(defun* bson-serialize-document-to-buffer (document
+                                           &optional (buffer (current-buffer)))
   (with-current-buffer buffer
     (bson-serialize-document document)))
 
@@ -295,7 +305,8 @@
     (bson-serialize-document document)
     (buffer-string)))
 
-(defun* bson-serialize-document-to-stream (document &optional (stream standard-output))
+(defun* bson-serialize-document-to-stream (document
+                                           &optional (stream standard-output))
   (let ((standard-output stream))
     (princ (bson-serialize-document-to-string document))))
 
@@ -342,7 +353,9 @@
              (loop for i from 10 downto 0
                    sum (lsh (deserialize-bit) i)))
            (deserialize-significand ()
-             (loop with bits = (nreverse (loop repeat 52 collect (deserialize-bit)))
+             (loop
+                with bits = (nreverse
+                             (loop repeat 52 collect (deserialize-bit)))
                    with significand = 0.0
                    for bit in bits
                    if (eq bit 1)
