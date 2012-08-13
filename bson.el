@@ -422,6 +422,7 @@
          (name (bson-deserialize-name)))
     (cons name
           (bson-evcase marker
+            (bson-marker-null     nil)
             (bson-marker-double   (bson-deserialize-double))
             (bson-marker-string   (bson-deserialize-string))
             (bson-marker-document (bson-deserialize-document))
