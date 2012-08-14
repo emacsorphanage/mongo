@@ -34,3 +34,9 @@ You can look up objects by their object id by using the bson serializer:
  :query (list (cons "_id" (bson-oid-of-hex-string "4f65e980cd6108da68000252"))))
 }}}
 
+== Dealing with mongo ==
+
+Dealing with mongo seems to result in lots of little JSON documents
+represented as alists.
+
+[[https://github.com/nicferrier/emacs-dotaccess|This module might help with that]]
