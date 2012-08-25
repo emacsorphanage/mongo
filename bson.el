@@ -167,6 +167,25 @@
         collect (string-to-number hex 16) into bytes
         finally return (make-bson-oid :string (apply 'unibyte-string bytes))))
 
+(defun bson-datetime-int64-to-time (byte-list)
+  "Convert a 64 bit int as BYTE-LIST into an Elisp time."
+  ;; Could do with some asserts to check byte-list
+  (let ((calc-num
+         (concat
+          "16#"
+          (mapconcat
+           (lambda (x) (format "%02X" x))
+           byte-list ""))))
+    (list
+     (calc-eval
+      "rsh(and(idiv($,1000),16#ffff0000),16)"
+      'rawnum
+      calc-num)
+     (calc-eval
+      "and(idiv($,1000),16#ffff)"
+      'rawnum
+      calc-num))))
+
 (defsubst bson-serialize-byte (byte)
   (insert-char byte 1))
 
@@ -383,6 +402,12 @@
     (prog1 (buffer-substring-no-properties start (point))
       (bson-deserialize-and-check-byte #x00))))
 
+(defsubst bson-deserialize-datetime ()
+  (let* ((bytes
+          (loop repeat 8
+             collect (bson-deserialize-byte))))
+    (bson-datetime-int64-to-time (reverse bytes))))
+
 (defsubst bson-deserialize-oid ()
   (let* ((bytes (loop repeat 12
                       collect (bson-deserialize-byte)))
@@ -423,6 +448,7 @@
     (cons name
           (bson-evcase marker
             (bson-marker-null     nil)
+            (bson-marker-datetime (bson-deserialize-datetime))
             (bson-marker-double   (bson-deserialize-double))
             (bson-marker-string   (bson-deserialize-string))
             (bson-marker-document (bson-deserialize-document))
