@@ -349,6 +349,7 @@
           (lsh (bson-deserialize-byte) 24)))
 
 (defsubst bson-deserialize-int64 ()
+  ;; FIXME: this probably needs to be done using calc or bigint
   (logior (lsh (bson-deserialize-byte)  0)
           (lsh (bson-deserialize-byte)  8)
           (lsh (bson-deserialize-byte) 16)
