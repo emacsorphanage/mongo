@@ -2,7 +2,7 @@
 
 # These are the variables that are specific to the package
 NAME=mongo
-VERSION=0.3
+VERSION=0.4
 DOC="A MongoDB client."
 
 # Everything beyond here should be generic
