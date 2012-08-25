@@ -332,7 +332,9 @@
   "Bind VAR to a db opened with ARGS and evaluate BODY.
 
 For ARGS see `mongo-open-database'."
-  (declare (indent 1))
+  (declare
+   (debug (sexp &rest form))
+   (indent 1))
   `(let* ((mongo-database mongo-database)
           (,var (mongo-open-database ,@args)))
      (unwind-protect
