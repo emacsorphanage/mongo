@@ -423,6 +423,15 @@
       (aset vector index value)
       (incf index))))
 
+(defsubst bson-deserialize-binary ()
+  (let* ((size (bson-deserialize-int32))
+         (subtype (bson-deserialize-byte))
+         (start (point))
+         (bytes
+          (string-bytes
+           (buffer-substring-no-properties start (+ start size)))))
+    bytes))
+
 (defsubst bson-deserialize-symbol ()
   (intern (bson-deserialize-string)))
 
@@ -451,6 +460,7 @@
             (bson-marker-datetime (bson-deserialize-datetime))
             (bson-marker-double   (bson-deserialize-double))
             (bson-marker-string   (bson-deserialize-string))
+            (bson-marker-binary   (bson-deserialize-binary))
             (bson-marker-document (bson-deserialize-document))
             (bson-marker-array    (bson-deserialize-array))
             (bson-marker-oid      (bson-deserialize-oid))
