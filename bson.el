@@ -427,11 +427,11 @@
 (defsubst bson-deserialize-binary ()
   (let* ((size (bson-deserialize-int32))
          (subtype (bson-deserialize-byte))
-         (start (point))
-         (bytes
-          (string-bytes
-           (buffer-substring-no-properties start (+ start size)))))
-    bytes))
+         (start (point)))
+    (goto-char (+ start size))
+    (list
+     subtype
+     (buffer-substring-no-properties start (point)))))
 
 (defsubst bson-deserialize-symbol ()
   (intern (bson-deserialize-string)))
