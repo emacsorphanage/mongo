@@ -93,17 +93,23 @@
 
 (defmacro mongo-define-message-fragment (name &rest slots)
   (declare (indent 1))
-  (flet ((make-slot-serializer (value slot-type)
-           (if (consp slot-type)
-               (ecase (first slot-type)
-                 (* `(loop for element in ,value
-                           collect (mongo-serialize-of-type element ',(second slot-type)))))
+  (flet
+      ((make-slot-serializer (value slot-type)
+         (if (consp slot-type)
+             (ecase (first slot-type)
+               (*
+                `(loop for element in ,value
+                    collect
+                      (mongo-serialize-of-type
+                       element ',(second slot-type)))))
              `(mongo-serialize-of-type ,value ',slot-type)))
-         (make-slot-deserializer (slot-type bound)
-           (if (consp slot-type)
-               (ecase (first slot-type)
-                 (* `(loop while (< (point) ,bound)
-                           collect (mongo-deserialize-of-type ',(second slot-type)))))
+       (make-slot-deserializer (slot-type bound)
+         (if (consp slot-type)
+             (ecase (first slot-type)
+               (* `(loop while (< (point) ,bound)
+                      collect
+                        (mongo-deserialize-of-type
+                         ',(second slot-type)))))
              `(mongo-deserialize-of-type ',slot-type))))
     (let ((constructor-name (intern (format "make-%s" name))))
       `(progn
@@ -214,7 +220,8 @@
         (goto-char start)
         (mongo-serialize-of-type header 'mongo-message-header)))))
 
-(defun* mongo-serialize-message-to-buffer (message &optional (buffer (current-buffer)))
+(defun* mongo-serialize-message-to-buffer (message
+                                           &optional (buffer (current-buffer)))
   (with-current-buffer buffer
     (mongo-serialize-message message)))
 
@@ -256,14 +263,16 @@
     `(progn
        (defun* ,constructor-name (underlying-process &key ,@slots)
          ,@(loop for slot-name in slot-names
-                 collect `(process-put underlying-process ',slot-name ,slot-name))
+                 collect `(process-put
+                           underlying-process ',slot-name ,slot-name))
          underlying-process)
        ,@(loop for slot-name in slot-names
                for accessor-name = (intern (format "%s-%s" name slot-name))
                collect `(defsubst ,accessor-name (object)
                           (process-get object ',slot-name))
                collect `(defsetf ,accessor-name (object) (value)
-                          `(prog1 ,value (process-put ,object ',',slot-name ,value)))))))
+                          `(prog1 ,value (process-put
+                                          ,object ',',slot-name ,value)))))))
 
 (mongo-define-process-struct mongo-database
   request response timeout (request-counter 0) callback)
@@ -298,14 +307,16 @@
                                   (make-default t)
                                   timeout
                                   callback)
-  (let* ((process (make-network-process :name "mongo"
-                                        :buffer (mongo-generate-new-unibyte-buffer " mongo")
-                                        :host host
-                                        :service (number-to-string port)
-                                        :coding 'binary
-                                        :filter 'mongo-database-process-filter
-                                        :filter-multibyte nil
-                                        :sentinel 'mongo-database-process-sentinel))
+  (let* ((process
+          (make-network-process
+           :name "mongo"
+           :buffer (mongo-generate-new-unibyte-buffer " mongo")
+           :host host
+           :service (number-to-string port)
+           :coding 'binary
+           :filter 'mongo-database-process-filter
+           :filter-multibyte nil
+           :sentinel 'mongo-database-process-sentinel))
          (database (make-mongo-database process :callback callback)))
     (when make-default (setq mongo-database database))
     database))
@@ -318,7 +329,12 @@
   `(let ((mongo-database ,database)) ,@body))
 
 (defmacro* mongo-with-open-database ((var &rest args) &rest body)
-  (declare (indent 1))
+  "Bind VAR to a db opened with ARGS and evaluate BODY.
+
+For ARGS see `mongo-open-database'."
+  (declare
+   (debug (sexp &rest form))
+   (indent 1))
   `(let* ((mongo-database mongo-database)
           (,var (mongo-open-database ,@args)))
      (unwind-protect
@@ -336,7 +352,8 @@
       (setq header (make-mongo-message-header))
       (setf (mongo-message-header request) header))
     (unless (mongo-message-header-request-id header)
-      (setf (mongo-message-header-request-id header) (mongo-new-request-id database)))
+      (setf (mongo-message-header-request-id header)
+            (mongo-new-request-id database)))
     (unless (mongo-message-header-response-to header)
       (setf (mongo-message-header-response-to header) 0))))
 

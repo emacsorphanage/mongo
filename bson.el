@@ -167,6 +167,25 @@
         collect (string-to-number hex 16) into bytes
         finally return (make-bson-oid :string (apply 'unibyte-string bytes))))
 
+(defun bson-datetime-int64-to-time (byte-list)
+  "Convert a 64 bit int as BYTE-LIST into an Elisp time."
+  ;; Could do with some asserts to check byte-list
+  (let ((calc-num
+         (concat
+          "16#"
+          (mapconcat
+           (lambda (x) (format "%02X" x))
+           byte-list ""))))
+    (list
+     (calc-eval
+      "rsh(and(idiv($,1000),16#ffff0000),16)"
+      'rawnum
+      calc-num)
+     (calc-eval
+      "and(idiv($,1000),16#ffff)"
+      'rawnum
+      calc-num))))
+
 (defsubst bson-serialize-byte (byte)
   (insert-char byte 1))
 
@@ -263,15 +282,24 @@
                   (bson-serialize-name name)
                   (,function object))))
     (bson-etypecase object
-      (float      (serialize-element bson-marker-double bson-serialize-double))
-      (string     (serialize-element bson-marker-string bson-serialize-string))
-      (hash-table (serialize-element bson-marker-document bson-serialize-document))
-      (list       (serialize-element bson-marker-document bson-serialize-document))
-      (bson-oid   (serialize-element bson-marker-oid bson-serialize-oid))
-      (vector     (serialize-element bson-marker-array bson-serialize-array))
-      (boolean    (serialize-element bson-marker-boolean bson-serialize-boolean))
-      (symbol     (serialize-element bson-marker-symbol bson-serialize-symbol))
-      (integer    (serialize-element bson-marker-int32 bson-serialize-int32)))))
+      (float      (serialize-element
+                   bson-marker-double bson-serialize-double))
+      (string     (serialize-element
+                   bson-marker-string bson-serialize-string))
+      (hash-table (serialize-element
+                   bson-marker-document bson-serialize-document))
+      (list       (serialize-element
+                   bson-marker-document bson-serialize-document))
+      (bson-oid   (serialize-element
+                   bson-marker-oid bson-serialize-oid))
+      (vector     (serialize-element
+                   bson-marker-array bson-serialize-array))
+      (boolean    (serialize-element
+                   bson-marker-boolean bson-serialize-boolean))
+      (symbol     (serialize-element
+                   bson-marker-symbol bson-serialize-symbol))
+      (integer    (serialize-element
+                   bson-marker-int32 bson-serialize-int32)))))
 
 (defun bson-serialize-document-1 (document)
   (bson-document-do (key value document)
@@ -286,7 +314,8 @@
         (goto-char start)
         (bson-serialize-int32 (+ (- end start) 4))))))
 
-(defun* bson-serialize-document-to-buffer (document &optional (buffer (current-buffer)))
+(defun* bson-serialize-document-to-buffer (document
+                                           &optional (buffer (current-buffer)))
   (with-current-buffer buffer
     (bson-serialize-document document)))
 
@@ -295,7 +324,8 @@
     (bson-serialize-document document)
     (buffer-string)))
 
-(defun* bson-serialize-document-to-stream (document &optional (stream standard-output))
+(defun* bson-serialize-document-to-stream (document
+                                           &optional (stream standard-output))
   (let ((standard-output stream))
     (princ (bson-serialize-document-to-string document))))
 
@@ -319,6 +349,7 @@
           (lsh (bson-deserialize-byte) 24)))
 
 (defsubst bson-deserialize-int64 ()
+  ;; FIXME: this probably needs to be done using calc or bigint
   (logior (lsh (bson-deserialize-byte)  0)
           (lsh (bson-deserialize-byte)  8)
           (lsh (bson-deserialize-byte) 16)
@@ -342,7 +373,9 @@
              (loop for i from 10 downto 0
                    sum (lsh (deserialize-bit) i)))
            (deserialize-significand ()
-             (loop with bits = (nreverse (loop repeat 52 collect (deserialize-bit)))
+             (loop
+                with bits = (nreverse
+                             (loop repeat 52 collect (deserialize-bit)))
                    with significand = 0.0
                    for bit in bits
                    if (eq bit 1)
@@ -370,6 +403,12 @@
     (prog1 (buffer-substring-no-properties start (point))
       (bson-deserialize-and-check-byte #x00))))
 
+(defsubst bson-deserialize-datetime ()
+  (let* ((bytes
+          (loop repeat 8
+             collect (bson-deserialize-byte))))
+    (bson-datetime-int64-to-time (reverse bytes))))
+
 (defsubst bson-deserialize-oid ()
   (let* ((bytes (loop repeat 12
                       collect (bson-deserialize-byte)))
@@ -384,6 +423,15 @@
       (declare (ignore key))
       (aset vector index value)
       (incf index))))
+
+(defsubst bson-deserialize-binary ()
+  (let* ((size (bson-deserialize-int32))
+         (subtype (bson-deserialize-byte))
+         (start (point)))
+    (goto-char (+ start size))
+    (list
+     subtype
+     (buffer-substring-no-properties start (point)))))
 
 (defsubst bson-deserialize-symbol ()
   (intern (bson-deserialize-string)))
@@ -409,8 +457,11 @@
          (name (bson-deserialize-name)))
     (cons name
           (bson-evcase marker
+            (bson-marker-null     nil)
+            (bson-marker-datetime (bson-deserialize-datetime))
             (bson-marker-double   (bson-deserialize-double))
             (bson-marker-string   (bson-deserialize-string))
+            (bson-marker-binary   (bson-deserialize-binary))
             (bson-marker-document (bson-deserialize-document))
             (bson-marker-array    (bson-deserialize-array))
             (bson-marker-oid      (bson-deserialize-oid))
