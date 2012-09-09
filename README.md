@@ -18,7 +18,7 @@ A quick example using Marmalade's mongo-db:
   (assoc-string
    "headers"
    (assoc-string "_latestVersion" (car docres))))
-'''
+```
 
 This performs a query for a single result, the {{{car docres}}} is
 used just because the result is always a list.
@@ -32,7 +32,7 @@ You can look up objects by their object id by using the bson serializer:
  :number-to-return 0
  :full-collection-name "marmalade.packages"
  :query (list (cons "_id" (bson-oid-of-hex-string "4f65e980cd6108da68000252"))))
-'''
+```
 
 Dealing with mongo
 ==================
