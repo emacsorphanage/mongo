@@ -1,0 +1,10 @@
+(mongo-el
+ :version "0.5.1"
+ :doc "Emacs Mongo-Db adapter."
+ :files 
+ ("mongo.el" 
+  "bson.el"
+  "README.md")
+ :test
+ (:files
+  ("mongo-tests.el")))

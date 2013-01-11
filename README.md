@@ -20,7 +20,7 @@ A quick example using Marmalade's mongo-db:
    (assoc-string "_latestVersion" (car docres))))
 ```
 
-This performs a query for a single result, the {{{car docres}}} is
+This performs a query for a single result, the ```car docres``` is
 used just because the result is always a list.
 
 You can look up objects by their object id by using the bson serializer:
@@ -41,3 +41,10 @@ Dealing with mongo seems to result in lots of little JSON documents
 represented as alists.
 
 [This module might help with that](https://github.com/nicferrier/emacs-dotaccess)
+
+
+Building with Elpakit
+=====================
+
+An [elpakit](https://github.com/nicferrier/elpakit) recipe is included
+so you can easily build the mongo-el package.
