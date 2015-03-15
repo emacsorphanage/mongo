@@ -1,8 +1,8 @@
 ;;; bson.el --- Binary JSON serializer/deserializer
 
-;; Copyright (C) 2011  Tomohiro Matsuyama
+;; Copyright (C) 2011-2015  Tomohiro Matsuyama
 
-;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
+;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; Version: 0.1
 ;; Keywords: convenience
 
